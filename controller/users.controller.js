@@ -54,7 +54,9 @@ const loginUser = async (req, res) => {
         subject: "login confirmation",
         text: `hello ${isUser.name}, you are just logged in, charge against your time`,
       });
-      return res.status(200).send({ message: "login successfull", token });
+      return res
+        .status(200)
+        .send({ message: "login successfull", token, user: isUser.name });
     }
   } catch (err) {
     return res.status(500).send({ message: "server error while login" });
@@ -62,17 +64,18 @@ const loginUser = async (req, res) => {
 };
 
 const forgetPassword = async (req, res) => {
-  let { email } = req.body;
   try {
+    let { email } = req.body;
     let checkUser = await userModel.findOne({ email });
-    console.log(checkUser);
     if (!checkUser) {
       return res
         .status(401)
         .send({ message: "please provide the correct email" });
     } else {
       const otp = Math.floor(Math.random() * 10000);
-
+      if (otp.length < 4) {
+        otp = Math.floor(Math.random() * 1000);
+      }
       transporter.sendMail({
         to: email,
         from: "anitadey9735@gmail.com",
@@ -80,7 +83,21 @@ const forgetPassword = async (req, res) => {
         text: `hello ${email},your otp is ${otp}`,
       });
       let newOtp = await optModel.create({ otp: otp });
-      return res.send(newOtp);
+      let otpToken = jwt.sign(
+        {
+          id: checkUser._id,
+          email: checkUser.email,
+        },
+        "SECRET!@#$",
+        {
+          expiresIn: "1 hour",
+        }
+      );
+      return res.send({
+        otp: newOtp,
+        token: otpToken,
+        message: "otp sent to your email!",
+      });
     }
   } catch (err) {
     return res
@@ -91,61 +108,48 @@ const forgetPassword = async (req, res) => {
 
 const verifyOtp = async (req, res) => {
   try {
-    let { token } = req.params;
+    let { token } = req.headers;
     let { otp } = req.body;
     let verifyToken = jwt.verify(token, "SECRET!@#$");
-    console.log("verify", verifyToken);
-    if (!verifyToken) {
-      return res.status(400).send({ message: "token expired" });
+
+    let user = await userModel.findById({ _id: verifyToken.id });
+    if (!user) {
+      return res
+        .status(400)
+        .send({ message: "no user found with the provieded id" });
     } else {
-      let user = await userModel.findById({ _id: verifyToken.id });
-      if (!user) {
-        return res
-          .status(400)
-          .send({ message: "no user found with the provieded id" });
+      let checkOtp = await optModel.findOne({ otp });
+      if (!checkOtp) {
+        return res.status(400).send({ message: "otp does not match" });
       } else {
-        let checkOtp = await optModel.findOne({ otp });
-        if (!checkOtp) {
-          return res.status(400).send({ message: "otp does not match" });
-        } else {
-          await optModel.deleteOne({ otp: otp });
-          return res.status(200).send({
-            message: "otp mathced , redirecting to reset password page",
-          });
-        }
+        await optModel.deleteOne({ otp: otp });
+        return res.status(200).send({
+          message: "otp mathced , redirecting to reset password page",
+        });
       }
     }
   } catch (err) {
-    return res
-      .status(500)
-      .send({ message: "server error while otp verify link" });
+    return res.status(500).send({ message: "jwt expired" });
   }
 };
 
 const resetPassword = async (req, res) => {
   try {
-    let { token } = req.params;
+    let { token } = req.headers;
     let { password } = req.body;
     let isToken = jwt.verify(token, "SECRET!@#$");
-    let user = await userModel.findOne({ email: isToken.email });
-    console.log("user", user);
-    if (!user) {
-      return res.status(400).send({ message: "token expired" });
-    } else {
-      let updateUser = await userModel.updateOne(
-        { email: isToken.email },
-        { $set: { password: password } }
-      );
-      // user.password = password;
-      // await user.save();
-      return res
-        .status(200)
-        .send({ message: "password reset", user: updateUser });
-    }
-  } catch (err) {
+    let updateUser = await userModel.updateOne(
+      { email: isToken.email },
+      { $set: { password: password } }
+    );
     return res
-      .status(500)
-      .send({ message: "server error while resetting password" });
+      .status(200)
+      .send({ message: "password reset successfull ", user: updateUser });
+  } catch (err) {
+    return res.status(500).send({
+      message: "server error while resetting password",
+      err: err.message,
+    });
   }
 };
 

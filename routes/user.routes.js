@@ -11,6 +11,6 @@ const app = express.Router();
 app.post("/signup", createUser);
 app.post("/login", loginUser);
 app.post("/forgetpassword", forgetPassword);
-app.post("/otpverify/:token", verifyOtp);
-app.post("/resetpassword/:token", resetPassword);
+app.post("/otpverify", verifyOtp);
+app.post("/resetpassword", resetPassword);
 module.exports = app;
