@@ -72,9 +72,9 @@ const forgetPassword = async (req, res) => {
         .status(401)
         .send({ message: "please provide the correct email" });
     } else {
-      const otp = Math.floor(Math.random() * 10000);
-      if (otp.length < 4) {
-        otp = Math.floor(Math.random() * 1000);
+      const otp = (Math.random() * 10000).toFixed(0);
+      if (otp < 1000) {
+        otp = otp + 1000;
       }
       transporter.sendMail({
         to: email,
@@ -111,7 +111,6 @@ const verifyOtp = async (req, res) => {
     let { token } = req.headers;
     let { otp } = req.body;
     let verifyToken = jwt.verify(token, "SECRET!@#$");
-
     let user = await userModel.findById({ _id: verifyToken.id });
     if (!user) {
       return res
