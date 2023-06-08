@@ -13,4 +13,5 @@ app.post("/login", loginUser);
 app.post("/forgetpassword", forgetPassword);
 app.post("/otpverify", verifyOtp);
 app.post("/resetpassword", resetPassword);
+
 module.exports = app;

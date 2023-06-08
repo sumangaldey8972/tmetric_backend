@@ -5,6 +5,7 @@ const transporter = require("../service");
 
 const createUser = async (req, res) => {
   let { email, password } = req.body;
+  console.log("email", email);
   try {
     let existingUser = await userModel.findOne({ email });
     if (existingUser) {
@@ -33,8 +34,9 @@ const loginUser = async (req, res) => {
   let { email, password } = req.body;
   try {
     let isUser = await userModel.findOne({ email });
+    console.log("is user", isUser);
     if (!isUser) {
-      return res.status(401).send({ message: "invalid email" });
+      return res.status(401).send({ message: "email does not exist" });
     } else if (isUser.password != password) {
       return res.status(401).send({ message: "invalid password" });
     } else {
@@ -76,6 +78,7 @@ const forgetPassword = async (req, res) => {
       if (otp < 1000) {
         otp = otp + 1000;
       }
+      console.log("otp", otp);
       transporter.sendMail({
         to: email,
         from: "anitadey9735@gmail.com",
@@ -113,9 +116,7 @@ const verifyOtp = async (req, res) => {
     let verifyToken = jwt.verify(token, "SECRET!@#$");
     let user = await userModel.findById({ _id: verifyToken.id });
     if (!user) {
-      return res
-        .status(400)
-        .send({ message: "no user found with the provieded id" });
+      return res.status(400).send({ message: "no user found" });
     } else {
       let checkOtp = await optModel.findOne({ otp });
       if (!checkOtp) {
@@ -128,7 +129,7 @@ const verifyOtp = async (req, res) => {
       }
     }
   } catch (err) {
-    return res.status(500).send({ message: "jwt expired" });
+    return res.status(500).send({ message: "token not found" });
   }
 };
 
